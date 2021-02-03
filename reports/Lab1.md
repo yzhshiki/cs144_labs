@@ -24,9 +24,30 @@ From https://github.com/CS144/sponge
  * [new branch]      master           -> raw/master
 ```
 
-利用新仓库的分支，在本地新建分支
+利用新仓库的分支，在本地新建分支，并将main分支合并过来
 
 ```
 git checkout -b lab1-startcode raw/lab1-startercode
+git merge main
+```
+
+在新的分支下git push，即可在origin仓库创建对应分支
+
+```
+git checkout lab1-startcode
+git commit -m "preparing for lab1"
+git push origin
+git branch -r
+    origin/HEAD -> origin/main
+    origin/lab1-startcode
+    origin/main
+    raw/lab1-startercode
+    raw/lab2-startercode
+    raw/lab3-startercode
+    raw/lab4-startercode
+    raw/lab5-startercode
+    raw/lab6-startercode
+    raw/lab7-startercode
+    raw/master
 ```
 
