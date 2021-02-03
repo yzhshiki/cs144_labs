@@ -36,7 +36,7 @@ git merge main
 ```
 git checkout lab1-startcode
 git commit -m "preparing for lab1"
-git push origin
+git push origin lab1-startcode
 git branch -r
     origin/HEAD -> origin/main
     origin/lab1-startcode
