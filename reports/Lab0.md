@@ -79,7 +79,18 @@ void get_URL(const string &host, const string &path) {
 
 ### 4 An in-memory reliable byte stream
 
-
+```c++
+class ByteStream {
+  private:
+    // Your code here -- add private members as necessary.
+    std::string _buf;
+    size_t _capacity;
+    size_t _write_count;
+    size_t _read_count;
+    bool _is_eof;
+    ...
+}
+```
 
 ```c++
 // 需要使用初始化列表来初始化
