@@ -32,7 +32,7 @@ class Socket : public FileDescriptor {
     //! Bind a socket to a specified address with [bind(2)](\ref man2::bind), usually for listen/accept
     void bind(const Address &address);
 
-    //! Connect a socket to a specified peer address with [connect(2)](\ref man2::connect)
+    //! Connect a socket to a specified peer address with [connect(2)](\ref man2::connect) 将socket和地址(包括ip、port)绑定。
     void connect(const Address &address);
 
     //! Shut down a socket via [shutdown(2)](\ref man2::shutdown)
