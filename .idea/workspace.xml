@@ -9,7 +9,12 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fdd9818-7c99-43d5-907c-c028d766af84" name="Default Changelist" comment="" />
+    <list default="true" id="7fdd9818-7c99-43d5-907c-c028d766af84" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libsponge/stream_reassembler.cc" beforeDir="false" afterPath="$PROJECT_DIR$/libsponge/stream_reassembler.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libsponge/stream_reassembler.hh" beforeDir="false" afterPath="$PROJECT_DIR$/libsponge/stream_reassembler.hh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/reports/Lab1.md" beforeDir="false" afterPath="$PROJECT_DIR$/reports/Lab1.md" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -38,6 +43,7 @@
     <property name="cf.advertisement.text.overridden" value="true" />
     <property name="cf.first.check.clang-format" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="nodejs_package_manager_path" value="npm" />
   </component>
   <component name="RunManager">
     <configuration default="true" type="GradleAppRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true">
@@ -55,11 +61,24 @@
       <option name="presentableId" value="Default" />
       <updated>1612070759421</updated>
       <workItem from="1612070761396" duration="2335000" />
-      <workItem from="1612350877932" duration="994000" />
+      <workItem from="1612350877932" duration="1600000" />
+      <workItem from="1612417626657" duration="817000" />
+      <workItem from="1614138192813" duration="29177000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
 </project>
