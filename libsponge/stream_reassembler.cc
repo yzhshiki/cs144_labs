@@ -27,23 +27,15 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         eof_flag = true;
     //数据长度、字节流的剩余空间的较小值，用于index>=nextindex时的读取
     auto maxLen = min(data.size(), stream_out().remaining_capacity());
+    //可以直接递归把不需要的部分忽略掉
     if(index < nextIndex){
-        if(index + data.size() > nextIndex){
-            for (size_t i = nextIndex - index;i<data.size();i++) {  //这里不能用maxLen
-                if (myMap.count(index+i)!=0) {
-                    continue;
-                }
-                myMap[index+i] = data.substr(i,1);  //将data一个字符一个字符的存进缓冲区
-                bytesUnAssembled++;
-//                cout<<"bytesUnAssembled: "<<bytesUnAssembled<<endl;
-            }
-
-        }
+        if(index + data.size() > nextIndex)
+            return push_substring(data.substr(nextIndex - index), nextIndex, eof);
         else
             return;
     }
 
-//    cout<<"executing index: "<<index<<endl;
+    //来的数据流序号大于所需，将其放进缓冲区。
     if(index > nextIndex){
         for (size_t i=0;i<maxLen;i++) {
             if (myMap.count(index+i)!=0) {
@@ -52,25 +44,19 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
             myMap[index+i] = data.substr(i,1);
             bytesUnAssembled++;
         }
-
         return;
     }
-    //
 
+    //直接写入字节流
     if(index == nextIndex){
-//        auto input_size = min(data.size(), stream_out().remaining_capacity());
         for(size_t i = 0; i < maxLen; i ++){
             stream_out().write(data.substr(i, 1));
-//            cout<<"writed letter: "<<data.substr(i, 1)<<endl;
             nextIndex ++;
             if(myMap.count(index + i) != 0){
                 myMap.erase(index + i);
                 bytesUnAssembled --;
-//                cout<<"bytesUnAssembled: "<<bytesUnAssembled<<endl;
             }
         }
-
-
     }
     //在index==nextIndex的情况下，可能写完data后，缓冲区里的可以写进字节流，所以进行检测
     while(myMap.count(nextIndex)!=0){
@@ -84,7 +70,7 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         else
             break;
     }
-
+    //eof标志已到来+到来时的那个数据末位没有被丢弃+缓冲区已全部输出到字节流，则告诉字节流eof
     if(eof_flag && empty())
         stream_out().end_input();
     return;
