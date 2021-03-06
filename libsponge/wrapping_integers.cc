@@ -14,8 +14,7 @@ using namespace std;
 //! \param n The input absolute 64-bit sequence number
 //! \param isn The initial sequence number
 WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
-    DUMMY_CODE(n, isn);
-    return WrappingInt32{0};
+    return WrappingInt32(((n << 32) >> 32) + isn.raw_value());
 }
 
 //! Transform a WrappingInt32 into an "absolute" 64-bit sequence number (zero-indexed)
@@ -29,6 +28,17 @@ WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
 //! and the other stream runs from the remote TCPSender to the local TCPReceiver and
 //! has a different ISN.
 uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
-    DUMMY_CODE(n, isn, checkpoint);
-    return {};
+    //后32位是n - isn
+    uint64_t backPart = n.raw_value() - isn.raw_value();
+    //前32位是checkpoint的前32位
+    uint64_t prePart = checkpoint & (0xFFFFFFFF00000000);
+    uint64_t ans = prePart + backPart;
+    //在ans,ans+1ul<<32,ans-1ul<<32三个中取距离checkpoint最近的一个
+    //这里比较差值大小要用int64而不是unsigned int64，因为小数减大数我们需要的就是负数的绝对值
+    if(abs(int64_t(ans + (1ul << 32) - checkpoint)) < abs(int64_t(ans - checkpoint)))
+        return ans + (1ul << 32);
+    //需要判断ans>=(1ul<<32),因为是int64。
+    if(ans >= (1ul<<32) && abs(int64_t(ans - (1ul << 32) - checkpoint)) < abs(int64_t(ans - checkpoint)))
+        return ans - (1ul << 32);
+    return ans;
 }
