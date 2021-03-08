@@ -14,6 +14,7 @@ using namespace std;
 //! \param n The input absolute 64-bit sequence number
 //! \param isn The initial sequence number
 WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
+    //截取n的后32位并加上isn即可
     return WrappingInt32(((n << 32) >> 32) + isn.raw_value());
 }
 
