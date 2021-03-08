@@ -6,14 +6,14 @@ typora-copy-images-to: images
 
 ### 1 实验注意事项
 
-本实验要实现的是TCPReceiver，在StreamReassembler外层，主要功能是将收到的TCPSegment的seqno转成index，并把数据和index一起喂给StreamReassembler去组装。​	![1615184511064](images\1615184511064-1615184511150.png)
+本实验要实现的是TCPReceiver，在StreamReassembler外层，主要功能是将收到的TCPSegment的seqno转成index，并把数据和index一起喂给StreamReassembler去组装。​	![1615184511064](images/1615184511064-1615184511150.png)
 
 1. 在StreamReassembler中每个字节有一个64位的index，在TCP首部由于空间问题，每个字节只能用32位的sequence number (seqno) 表示。
 2. 为了提高安全性、避免同样的两端被以前的通信中的segments干扰，一段数据流的seqno并不是从零开始的，而是从一个随机的32位数(ISN)开始，往后则(ISN+1)%(2^32)
 3. SYN和FIN标志并不属于数据流，但也占有sequence number
-4. 字节流中使用的是index，在TCP首部传输时的是seqno，转换规则如下。![seqno_index](images\seqno_index-1615184762301.jpg)
+4. 字节流中使用的是index，在TCP首部传输时的是seqno，转换规则如下。![seqno_index](images/seqno_index-1615184762301.jpg)
 
-5. ![TCPSegment](images\TCPSegment-1615184776284.jpg)
+5. ![TCPSegment](images/TCPSegment-1615184776284.jpg)
 
 ### 2 实验过程
 
