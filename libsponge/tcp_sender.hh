@@ -8,6 +8,24 @@
 
 #include <functional>
 #include <queue>
+#include <map>
+
+class RETimer{
+  private:
+    //retransmission timeout
+    unsigned int rto;
+    unsigned int _time;
+    bool _isrunning;
+
+  public:
+    RETimer(unsigned int _initial_retrans_timeout);
+    bool isRunning();
+    void passTime(unsigned int passedTime);
+    void doubleRTO();
+    void resetTime();
+    void resetRTO(unsigned int _initial_retrans_timeout);
+    void start();
+};
 
 //! \brief The "sender" part of a TCP implementation.
 
@@ -31,6 +49,17 @@ class TCPSender {
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+
+    //存储已发送但未被ack的segments
+    std::queue<TCPSegment> outSegments{};
+
+    uint64_t _bytes_in_flight;
+    WrappingInt32 _ackGot;
+    uint16_t _window_size;
+    uint16_t _true_window_size;
+    uint16_t _consecutive_retransmission;
+    bool _fin_flag;
+    RETimer timer;
 
   public:
     //! Initialize a TCPSender
@@ -87,6 +116,7 @@ class TCPSender {
     //! \brief relative seqno for the next byte to be sent
     WrappingInt32 next_seqno() const { return wrap(_next_seqno, _isn); }
     //!@}
+    void sendSegment(TCPSegment &segment);
 };
 
 #endif  // SPONGE_LIBSPONGE_TCP_SENDER_HH
