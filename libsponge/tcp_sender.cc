@@ -32,23 +32,20 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
 uint64_t TCPSender::bytes_in_flight() const { return _bytes_in_flight; }
 
 void TCPSender::fill_window() {
-//    printf("***Start fill window***\n");
-//    printf("finflag: %d, _window_size:%d _true_window_size: %d\n",_fin_flag, _window_size, _true_window_size);
     if(_fin_flag)
         return;
+    //用于区分窗口为1、窗口为0视作1的情况
     bool zero_flag = false;
     //字节流中下一个字节的seqno
     WrappingInt32 _next_seq32 = wrap(_next_seqno, _isn);
+    //字节流中下一个字节的absolute seqno为0 说明还没有握手
     if(_next_seqno == 0){
-//        printf("**Start SYN**\n");
         TCPSegment segment;
         segment.header().seqno = _next_seq32;
         segment.header().syn = true;
         sendSegment(segment);
-//        printf("**End SYN**\n");
         return;
     }
-    //如果这个字节的seqno在窗口内，则发送
     if(_true_window_size == 0){
         zero_flag = true;
         _window_size = 1;
@@ -56,28 +53,25 @@ void TCPSender::fill_window() {
     }
 
     size_t remain;
+    //判断窗口剩余空间，是否还能发送
     while((remain = _true_window_size - (_next_seq32.raw_value() - _ackGot.raw_value()))!=0 && !_fin_flag){
-//        printf("**Common data**\n");
-//        printf("_next_32: %u, ackGot: %u, windowsize: %d, stream empty: %d\n", _next_seq32.raw_value(), _ackGot.raw_value(), _window_size, _stream.buffer_empty());
         TCPSegment segment;
         segment.header().seqno = _next_seq32;
-        if(_next_seqno == 0)
-            segment.header().syn = true;
-        //注意Buffer的构造函数，只允许传右值。
+        //注意Buffer的构造函数，只允许传右值（即常数等不能放在等式左边，有地址的值）。
         size_t dataLen = min(size_t(remain), TCPConfig::MAX_PAYLOAD_SIZE);
         segment.payload() = _stream.read(dataLen);
-        if(_stream.eof() && _window_size >= segment.length_in_sequence_space() + 1){
-//            printf("**Start FIN**\n");
+        //字节流在刚刚的读取后已空，且有空间留给FIN标志
+        if(_stream.eof() && remain >= segment.length_in_sequence_space() + 1){
             segment.header().fin = true;
             _fin_flag = true;
-//            printf("**End FIN**\n");
         }
 
-        //important
+        //
         if(segment.length_in_sequence_space()==0){
             return;
         }
         sendSegment(segment);
+        //更新seqno用于循环判断
         _next_seq32 = wrap(_next_seqno, _isn);
     }
     if(zero_flag){
