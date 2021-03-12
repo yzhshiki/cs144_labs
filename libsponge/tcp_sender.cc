@@ -23,7 +23,6 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
     , _stream(capacity)
     , _bytes_in_flight(0)
     ,_ackGot(_isn.raw_value())
-    ,_window_size(0)
     ,_true_window_size(0)
     ,_consecutive_retransmission(0)
     ,_fin_flag(false)
@@ -48,7 +47,6 @@ void TCPSender::fill_window() {
     }
     if(_true_window_size == 0){
         zero_flag = true;
-        _window_size = 1;
         _true_window_size = 1;
     }
 
@@ -60,13 +58,13 @@ void TCPSender::fill_window() {
         //注意Buffer的构造函数，只允许传右值（即常数等不能放在等式左边，有地址的值）。
         size_t dataLen = min(size_t(remain), TCPConfig::MAX_PAYLOAD_SIZE);
         segment.payload() = _stream.read(dataLen);
-        //字节流在刚刚的读取后已空，且有空间留给FIN标志
+        //字节流已结束，且有空间留给FIN标志
         if(_stream.eof() && remain >= segment.length_in_sequence_space() + 1){
             segment.header().fin = true;
             _fin_flag = true;
         }
 
-        //
+        //字节流是空的，但没有eof(这是由使用者指定的，并不是空了就结束了)。
         if(segment.length_in_sequence_space()==0){
             return;
         }
@@ -75,17 +73,16 @@ void TCPSender::fill_window() {
         _next_seq32 = wrap(_next_seqno, _isn);
     }
     if(zero_flag){
-        _window_size = 0;
         _true_window_size = 0;
     }
-//    printf("***End fill window***\n");
 
 }
 
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
-//    printf("***Start receive***\n");
+
+    //将已发送报文段中，完全被ack的那些丢弃。
     while(!outSegments.empty()){
         TCPSegment segment = outSegments.front();
         if(segment.header().seqno.raw_value() + segment.length_in_sequence_space() <= ackno.raw_value()){
@@ -95,23 +92,19 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         else
             break;
     }
+    if(ackno.raw_value() > wrap(_next_seqno, _isn).raw_value())
+        return;
+    //收到一个比之前的ackno都大的新ackno后
     if(ackno.raw_value() > _ackGot.raw_value()) {
+        _ackGot = ackno;
         timer.resetTime();
         timer.resetRTO(_initial_retransmission_timeout);
         if (!outSegments.empty())
             timer.start();
         _consecutive_retransmission = 0;
     }
-    _window_size = window_size;
     _true_window_size = window_size;
-    if(ackno.raw_value() >= _ackGot.raw_value()) {
-        _ackGot = ackno;
-//        _window_size = window_size;
-
-    }
-//    printf("Receiving ackno: %u, ackGot: %u window size: %d\n",ackno.raw_value(), _ackGot.raw_value(),_window_size);
     fill_window();
-//    printf("***End receive***\n");
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
@@ -120,12 +113,9 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
     if(!timer.isRunning() && !outSegments.empty()){
         TCPSegment segment = outSegments.front();
         _segments_out.push(segment);
-//        printf("resending : %s\n", segment.payload().copy().c_str());
-//        printf("Ticking and window size: %d\n",_window_size);
         if(_true_window_size!=0 || _next_seqno == 1){
             _consecutive_retransmission++;
             timer.doubleRTO();
-//            printf("Doubled rto\n");
         }
         timer.start();
     }
@@ -136,26 +126,14 @@ unsigned int TCPSender::consecutive_retransmissions() const { return _consecutiv
 void TCPSender::send_empty_segment() {}
 
 void TCPSender::sendSegment(TCPSegment &segment) {
-//    printf("sending : %s\n", segment.payload().copy().c_str());
-//    printf("Sending....\n");
-//    printf("window size: %d, dataLen: %ld, streamLen: %ld\n",_window_size, segment.length_in_sequence_space(),stream_in().buffer_size());
-//    printf("TCPHeader Summary: %s with %ld space and %ld bytes\n", segment.header().summary().c_str(), segment.length_in_sequence_space(), segment.payload().size());
     _segments_out.push(segment);
-    //如果不是空报文段，则加入暂存区
-//        if(dataLen!=0)
     outSegments.push(segment);
     _next_seqno += segment.length_in_sequence_space();
     _bytes_in_flight += segment.length_in_sequence_space();
-    if(_window_size >= segment.length_in_sequence_space())
-        _window_size -= segment.length_in_sequence_space();
-    else
-        _window_size = 0;
     if(!timer.isRunning()){
         timer.resetTime();
         timer.start();
     }
-//    printf("After send,  window size: %d\n",_window_size);
-//    printf("\n next_seqno: %ld %ld\n",_next_seqno, bytes_in_flight());
 }
 
 RETimer::RETimer(unsigned int _initial_retrans_timeout) :

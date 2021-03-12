@@ -55,7 +55,6 @@ class TCPSender {
 
     uint64_t _bytes_in_flight;
     WrappingInt32 _ackGot;
-    uint16_t _window_size;
     uint16_t _true_window_size;
     uint16_t _consecutive_retransmission;
     bool _fin_flag;
