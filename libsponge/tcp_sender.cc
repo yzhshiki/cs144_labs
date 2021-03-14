@@ -81,7 +81,8 @@ void TCPSender::fill_window() {
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
-
+    if(ackno.raw_value() > wrap(_next_seqno, _isn).raw_value())
+        return;
     //将已发送报文段中，完全被ack的那些丢弃。
     while(!outSegments.empty()){
         TCPSegment segment = outSegments.front();
@@ -92,8 +93,6 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         else
             break;
     }
-    if(ackno.raw_value() > wrap(_next_seqno, _isn).raw_value())
-        return;
     //收到一个比之前的ackno都大的新ackno后
     if(ackno.raw_value() > _ackGot.raw_value()) {
         _ackGot = ackno;
