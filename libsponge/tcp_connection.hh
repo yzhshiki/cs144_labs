@@ -20,6 +20,14 @@ class TCPConnection {
     //! for 10 * _cfg.rt_timeout milliseconds after both streams have ended,
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
+    size_t _time_since_last_segment_received{0};
+    bool _active{true};
+    bool _rst_set{false};
+    // 用于记录四次挥手中，自己的ack是否已发送，若已发送，则之后收到seg都不需要回复。
+    bool _fin_ack_sent{false};
+    bool _closedByApp{false};
+    bool _syn_set{false};
+    std::optional<WrappingInt32> _rec_fin_seqno{};
 
   public:
     //! \name "Input" interface for the writer
@@ -94,6 +102,8 @@ class TCPConnection {
     TCPConnection(const TCPConnection &other) = delete;
     TCPConnection &operator=(const TCPConnection &other) = delete;
     //!@}
+    void sendseg();
+    void clean_shutdown();
 };
 
 #endif  // SPONGE_LIBSPONGE_TCP_FACTORED_HH

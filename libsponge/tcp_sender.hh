@@ -25,6 +25,7 @@ class RETimer{
     void resetTime();
     void resetRTO(unsigned int _initial_retrans_timeout);
     void start();
+    unsigned int getRTO();
 };
 
 //! \brief The "sender" part of a TCP implementation.
@@ -58,6 +59,7 @@ class TCPSender {
     uint16_t _true_window_size;
     uint16_t _consecutive_retransmission;
     bool _fin_flag;
+    bool _syn_flag{false};
     RETimer timer;
 
   public:
@@ -116,6 +118,7 @@ class TCPSender {
     WrappingInt32 next_seqno() const { return wrap(_next_seqno, _isn); }
     //!@}
     void sendSegment(TCPSegment &segment);
+    unsigned int getTRO(){ return timer.getRTO(); }
 };
 
 #endif  // SPONGE_LIBSPONGE_TCP_SENDER_HH

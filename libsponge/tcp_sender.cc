@@ -38,7 +38,8 @@ void TCPSender::fill_window() {
     //字节流中下一个字节的seqno
     WrappingInt32 _next_seq32 = wrap(_next_seqno, _isn);
     //字节流中下一个字节的absolute seqno为0 说明还没有握手
-    if(_next_seqno == 0){
+    if(!_syn_flag){
+        _syn_flag = true;
         TCPSegment segment;
         segment.header().seqno = _next_seq32;
         segment.header().syn = true;
@@ -116,13 +117,17 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
             _consecutive_retransmission++;
             timer.doubleRTO();
         }
+        timer.resetTime();
         timer.start();
     }
 }
 
 unsigned int TCPSender::consecutive_retransmissions() const { return _consecutive_retransmission; }
 
-void TCPSender::send_empty_segment() {}
+void TCPSender::send_empty_segment() {
+    TCPSegment seg;
+    sendSegment(seg);
+}
 
 void TCPSender::sendSegment(TCPSegment &segment) {
     _segments_out.push(segment);
@@ -159,3 +164,4 @@ void RETimer::resetRTO(unsigned int _initial_retrans_timeout) {
     rto = _initial_retrans_timeout;
 }
 void RETimer::start() { _isrunning = true;}
+unsigned int RETimer::getRTO() { return rto;}
