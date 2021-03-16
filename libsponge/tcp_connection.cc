@@ -34,16 +34,15 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
     _time_since_last_segment_received = 0;
     //如果RST标志已设置，将inbound和outbound流都设为error状态并永远关闭连接。
     if(seg.header().rst){
-//        if()
+        if(!_syn_set && !seg.header().ack)
+            return;
         _receiver.stream_out().set_error();
         _sender.stream_in().set_error();
         _rst_set = true;
         _active = false;
         return;
     }
-//    //如果连接已经被应用关闭，那么只接受FIN挥手这一个消息。
-//    if(_closedByApp && !seg.header().fin)
-//        return;
+
     //将报文段传递给TCPReceiver
     _receiver.segment_received(seg);
     //如果ACK标志已设置，则将ackno和window size告诉TCPSender
@@ -51,8 +50,6 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
         _sender.ack_received(seg.header().ackno, seg.header().win);
         //可能是passive close情况下的第四次挥手，所以可能使连接在此结束。
         clean_shutdown();
-        if(!_active)
-            return;
     }
     //如果已经发送了挥手时的ack报文段，那么连接只需要检测可能的对面的FIN重传
     if(_fin_ack_sent && !seg.header().fin)
@@ -60,7 +57,6 @@ void TCPConnection::segment_received(const TCPSegment &seg) {
     if(seg.header().fin)
         _rec_fin_seqno = seg.header().seqno;
     if(seg.length_in_sequence_space() > 0){
-        printf("Send segment time in receving\n");
         sendseg();
     }
     clean_shutdown();
@@ -71,7 +67,6 @@ bool TCPConnection::active() const { return _active; }
 size_t TCPConnection::write(const string &data) {
     size_t Written = _sender.stream_in().write(data);
     _sender.fill_window();
-    printf("Send segment time in writing\n");
     sendseg();
     return Written;
 }
@@ -80,46 +75,31 @@ size_t TCPConnection::write(const string &data) {
 void TCPConnection::tick(const size_t ms_since_last_tick) {
     if(!_active)
         return;
-    printf("Before time pass\n");
     _time_since_last_segment_received += ms_since_last_tick;
     _sender.tick(ms_since_last_tick);
-    printf("******Sender's RTO is %u*****\n", _sender.getTRO());
     if(_sender.consecutive_retransmissions() > TCPConfig::MAX_RETX_ATTEMPTS){
         _rst_set = true;
-        printf("Send segment time when too many conse_retran\n");
         sendseg();
-        if(!_active)
-            return;
     }
-//    if(_time_since_last_segment_received >= TCPConfig::TIMEOUT_DFLT * 10){
-        clean_shutdown();
-//        printf("Send segment time after clean_shutdown\n");
-//        sendseg();
-//    }
+    clean_shutdown();
+    if(!_active)
+        return;
 
     if(!_sender.segments_out().empty()){
-        printf("Send segment time in ticking\n");
         sendseg();
     }
 
-    printf("End time pass\n");
 }
 
 void TCPConnection::end_input_stream() {
     _sender.stream_in().end_input();
     _sender.fill_window();
     _closedByApp = true;
-    printf("Send segment time when end input stream\n");
     sendseg();
 }
 
 void TCPConnection::connect() {
     _sender.fill_window();
-//    if(!_sender.segments_out().empty()){
-//        TCPSegment segment = _sender.segments_out().front();
-//        segments_out().push(segment);
-//    }
-    printf("Send segment time in connecting\n");
     sendseg();
     return;
 }
@@ -143,8 +123,6 @@ void TCPConnection::sendseg() {
         _sender.segments_out().push(seg);
     while(!_sender.segments_out().empty()){
         seg = _sender.segments_out().front();
-        printf("connection send from _sender segments out: %s\n", seg.header().summary().c_str());
-        printf("_sender segment out last %lu segments\n", _sender.segments_out().size());
         _sender.segments_out().pop();
 
         if(seg.header().syn)
@@ -162,7 +140,6 @@ void TCPConnection::sendseg() {
             _sender.stream_in().set_error();
             _active = false;
         }
-        printf("connection send : %s\n", seg.header().summary().c_str());
         segments_out().push(seg);
     }
     clean_shutdown();
@@ -177,27 +154,15 @@ void TCPConnection::clean_shutdown() {
 //            _active = false;
 //        }
 //    }
-    printf("*****p0*****\n");
-    printf("%d, %d\n", _receiver.stream_out().input_ended(), _sender.stream_in().eof());
     if(_receiver.stream_out().input_ended() && !(_sender.stream_in().eof()))
         _linger_after_streams_finish = false;
 
-    printf("*****p1*****\n");
-        if(_receiver.unassembled_bytes() == 0 && _receiver.stream_out().input_ended()){
-            printf("*****p2*****\n");
-            if(_sender.stream_in().input_ended() && _sender.segments_out().empty()){
-                printf("*****p3*****\n");
-                printf("sender bytes_in flight: %lu\n", _sender.bytes_in_flight());
-                if(_sender.bytes_in_flight() == 0){
-                    printf("*****p4*****\n");
-                    if(_time_since_last_segment_received >= 10 * _cfg.rt_timeout || _linger_after_streams_finish == false)
-                        _active = false;
-                }
+    if(_receiver.unassembled_bytes() == 0 && _receiver.stream_out().input_ended()){
+        if(_sender.stream_in().input_ended() && _sender.segments_out().empty()){
+            if(_sender.bytes_in_flight() == 0){
+                if(_time_since_last_segment_received >= 10 * _cfg.rt_timeout || _linger_after_streams_finish == false)
+                    _active = false;
             }
         }
-//    if (_sender.stream_in().eof() && _sender.bytes_in_flight() == 0 && _receiver.stream_out().input_ended()) {
-//        if (!_linger_after_streams_finish || time_since_last_segment_received() >= 10 * _cfg.rt_timeout) {
-//            _active = false;
-//        }
-//    }
+    }
 }
